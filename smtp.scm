@@ -113,9 +113,9 @@
 
 (define-record-printer (mailbox x out)
   (match x 
-	 (($ smtp-abnf#mailbox 'Mailbox "" "" )  (fprintf out "<>"))
-	 (($ smtp-abnf#mailbox 'Mailbox "postmaster" "" )  (fprintf out "<postmaster>"))
-	 (($ smtp-abnf#mailbox 'Mailbox l d )  
+	 (($ smtp#mailbox 'Mailbox "" "" )  (fprintf out "<>"))
+	 (($ smtp#mailbox 'Mailbox "postmaster" "" )  (fprintf out "<postmaster>"))
+	 (($ smtp#mailbox 'Mailbox l d )  
 	  (let ((mbox  (sprintf "~A@~A" l d)))
 	    (fprintf out "<~A>" mbox)))))
 
@@ -168,11 +168,11 @@
 
 (define-record-printer (reply x out)
   (match x 
-	 (($ smtp-abnf#reply 'Reply (and c ($ smtp-abnf#code 'Code suc cat _)) ())
+	 (($ smtp#reply 'Reply (and c ($ smtp#code 'Code suc cat _)) ())
 	  (let ((msg (sprintf "~A in category ~A" suc cat)))
 	    (fprintf out "~A" (Reply c (list msg)))))
 
-	 (($ smtp-abnf#reply 'Reply code msg) 
+	 (($ smtp#reply 'Reply code msg) 
 	  (let ((prefix-con (sprintf "~A-" code))
 		(prefix-end (sprintf "~A " code))
 		(fmt        (lambda (p) (lambda (l) (sprintf "~A~A\r\n" p l)))))
@@ -209,9 +209,9 @@
 ;; PreliminarySuccess, Success, or IntermediateSuccess.
 
 (define (reply-success? r)
-  (match r (($ smtp-abnf#reply 'Reply 
-	       ($ smtp-abnf#code 'Code 
-		  ($ smtp-abnf#success-code (or 'PreliminarySuccess 
+  (match r (($ smtp#reply 'Reply 
+	       ($ smtp#code 'Code 
+		  ($ smtp#success-code (or 'PreliminarySuccess 
 				      'IntermediateSuccess 'Success _) _ _) _))
 	    #t)
 	 (else #f)))
@@ -220,9 +220,9 @@
 ;; PermanentFailure or TransientFailure.
 
 (define (reply-failure? r)
-  (match r (($ smtp-abnf#reply 'Reply 
-	       ($ smtp-abnf#code 'Code 
-		  ($ smtp-abnf#success-code (or 'PermanentFailure 
+  (match r (($ smtp#reply 'Reply 
+	       ($ smtp#code 'Code 
+		  ($ smtp#success-code (or 'PermanentFailure 
 				      'TransientFailure _) _ _) _))
 	    #t)
 	 (else #f)))
@@ -230,10 +230,10 @@
 ;; The replies 221 and 421 signify Shutdown.
 
 (define (reply-shutdown? r)
-  (match r (($ smtp-abnf#reply 'Reply 
-	       ($ smtp-abnf#code 'Code ($ smtp-abnf#success-code (or 'Success 
+  (match r (($ smtp#reply 'Reply 
+	       ($ smtp#code 'Code ($ smtp#success-code (or 'Success 
 						 'TransientFailure) _) 
-		  ($ smtp-abnf#category 'Connection _) 1) _)
+		  ($ smtp#category 'Connection _) 1) _)
 	    #t)
 	 (else #f)))
 
@@ -723,7 +723,8 @@
     ))
 
 
-(define (parse-cmd k s) (smtp-cmd (compose k caar) identity s))
+(define (parse-cmd k s)
+  (smtp-cmd (compose k caar) identity s))
 
 (define start-session
 ;; Parses an SMTP protocol line and runs handle-cmd to determine the
@@ -736,59 +737,59 @@
             (handle-cmd     (lambda (st) 
 			       (lambda (cmd)
 				 (match (list st cmd )
-					((($ smtp-abnf#session-state 'HaveQuit) _)  (event (Shutdown)))
+					((($ smtp#session-state 'HaveQuit) _)  (event (Shutdown)))
 					
-					((_       ($ smtp-abnf#cmd 'WrongArg c _))  (event (SyntaxErrorIn c)))
-					((_       ($ smtp-abnf#cmd 'Quit))          (trans (HaveQuit) (Shutdown)))
-					((_       ($ smtp-abnf#cmd 'Noop))          (event (SayOK) ))
+					((_       ($ smtp#cmd 'WrongArg c _))  (event (SyntaxErrorIn c)))
+					((_       ($ smtp#cmd 'Quit))          (trans (HaveQuit) (Shutdown)))
+					((_       ($ smtp#cmd 'Noop))          (event (SayOK) ))
 					
-					((_       ($ smtp-abnf#cmd 'Turn))          (event (NotImplemented) ))
-					((_       ($ smtp-abnf#cmd 'Send _))        (event (NotImplemented) ))
-					((_       ($ smtp-abnf#cmd 'Soml _))        (event (NotImplemented) ))
-					((_       ($ smtp-abnf#cmd 'Saml _))        (event (NotImplemented) ))
-					((_       ($ smtp-abnf#cmd 'Vrfy _))        (event (NotImplemented) ))
-					((_       ($ smtp-abnf#cmd 'Expn _))        (event (NotImplemented) ))
+					((_       ($ smtp#cmd 'Turn))          (event (NotImplemented) ))
+					((_       ($ smtp#cmd 'Send _))        (event (NotImplemented) ))
+					((_       ($ smtp#cmd 'Soml _))        (event (NotImplemented) ))
+					((_       ($ smtp#cmd 'Saml _))        (event (NotImplemented) ))
+					((_       ($ smtp#cmd 'Vrfy _))        (event (NotImplemented) ))
+					((_       ($ smtp#cmd 'Expn _))        (event (NotImplemented) ))
 					
-					((_       ($ smtp-abnf#cmd 'Help x))        (event (SeeksHelp x) ))
+					((_       ($ smtp#cmd 'Help x))        (event (SeeksHelp x) ))
 				       
-				       ((($ smtp-abnf#session-state 'Unknown)   ($ smtp-abnf#cmd 'Rset))          
+				       ((($ smtp#session-state 'Unknown)   ($ smtp#cmd 'Rset))          
 					(event (SayOK) ))
-				       ((($ smtp-abnf#session-state 'HaveHelo)  ($ smtp-abnf#cmd 'Rset))          
+				       ((($ smtp#session-state 'HaveHelo)  ($ smtp#cmd 'Rset))          
 					(event (SayOK) ))
-				       ((_                            ($ smtp-abnf#cmd 'Rset))          
+				       ((_                            ($ smtp#cmd 'Rset))          
 					(trans (HaveHelo) (ResetState )))
 				       
-				       ((($ smtp-abnf#session-state 'Unknown)   ($ smtp-abnf#cmd 'Helo x))        
+				       ((($ smtp#session-state 'Unknown)   ($ smtp#cmd 'Helo x))        
 					(trans (HaveHelo) (SayHelo x)))
-				       ((_                            ($ smtp-abnf#cmd 'Helo x))        
+				       ((_                            ($ smtp#cmd 'Helo x))        
 					(trans (HaveHelo) (SayHeloAgain x)))
-				       ((($ smtp-abnf#session-state 'Unknown)   ($ smtp-abnf#cmd 'Ehlo x))        
+				       ((($ smtp#session-state 'Unknown)   ($ smtp#cmd 'Ehlo x))        
 					(trans (HaveHelo) (SayEhlo x)))
-				       ((_                            ($ smtp-abnf#cmd 'Ehlo x))        
+				       ((_                            ($ smtp#cmd 'Ehlo x))        
 					(trans (HaveHelo) (SayEhloAgain x)))
 
-				       ((($ smtp-abnf#session-state 'Unknown)   ($ smtp-abnf#cmd 'MailFrom . _))  
+				       ((($ smtp#session-state 'Unknown)   ($ smtp#cmd 'MailFrom . _))  
 					(event (NeedHeloFirst)))
-				       ((_                            ($ smtp-abnf#cmd 'MailFrom x p))  
+				       ((_                            ($ smtp#cmd 'MailFrom x p))  
 					(trans (HaveMailFrom) (SetMailFrom x p)))
 				       
-				       ((($ smtp-abnf#session-state 'Unknown)   ($ smtp-abnf#cmd 'RcptTo . _))    
+				       ((($ smtp#session-state 'Unknown)   ($ smtp#cmd 'RcptTo . _))    
 					(event (NeedHeloFirst)))
-				       ((($ smtp-abnf#session-state 'HaveHelo)  ($ smtp-abnf#cmd 'RcptTo . _))    
+				       ((($ smtp#session-state 'HaveHelo)  ($ smtp#cmd 'RcptTo . _))    
 					(event (NeedMailFromFirst)))
-				       ((_                            ($ smtp-abnf#cmd 'RcptTo x p))    
+				       ((_                            ($ smtp#cmd 'RcptTo x p))    
 					(trans (HaveRcptTo) (AddRcptTo x p)))
 				       
-				       ((($ smtp-abnf#session-state 'Unknown)      ($ smtp-abnf#cmd 'Data))     
+				       ((($ smtp#session-state 'Unknown)      ($ smtp#cmd 'Data))     
 					(event (NeedHeloFirst)))
-				       ((($ smtp-abnf#session-state 'HaveHelo)     ($ smtp-abnf#cmd 'Data))     
+				       ((($ smtp#session-state 'HaveHelo)     ($ smtp#cmd 'Data))     
 					(event (NeedMailFromFirst)))
-				       ((($ smtp-abnf#session-state 'HaveMailFrom) ($ smtp-abnf#cmd 'Data))     
+				       ((($ smtp#session-state 'HaveMailFrom) ($ smtp#cmd 'Data))     
 					(event (NeedRcptToFirst)))
-				       ((($ smtp-abnf#session-state 'HaveRcptTo)   ($ smtp-abnf#cmd 'Data))     
+				       ((($ smtp#session-state 'HaveRcptTo)   ($ smtp#cmd 'Data))     
 					(trans (HaveData) (StartData)))
 				       
-				       ((($ smtp-abnf#session-state 'HaveData)   _)     (event (StartData)))
+				       ((($ smtp#session-state 'HaveData)   _)     (event (StartData)))
 
 				       ((_  _)                           (event (Unrecognized "")))
 				       
