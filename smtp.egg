@@ -4,7 +4,7 @@
  (license "GPL-3")
  (category net)
  (dependencies matchable datatype utf8 abnf )
- (test-dependencies test)
+ (test-dependencies test srfi-13)
  (author "Ivan Raikov")
  (synopsis "Parser combinators and state machine for Simple Mail Transfer Protocol (RFC 5321).")
  (components (extension smtp))
