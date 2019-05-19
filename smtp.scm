@@ -468,14 +468,22 @@
 
 (define address-literal
   (abnf:concatenation
-   (abnf:char #\[) 
+   (abnf:drop-consumed (abnf:char #\[))
    (abnf:alternatives
     IPv4-address-literal 
     IPv6-address-literal 
     General-address-literal)
-   (abnf:char #\])))
+   (abnf:drop-consumed (abnf:char #\]))))
 
 ;; See Section 4.1.3
+
+(define domain-or-address-literal
+  (abnf:alternatives
+   domain
+   (abnf:bind-consumed-strings->list
+    (lambda (l)
+      (string-concatenate (intersperse l ".")))
+    address-literal)))
 
 (define Mailbox-p
   (abnf:bind
@@ -701,7 +709,7 @@
         (quit (mkcmdp0 "QUIT" Quit))
         (turn (mkcmdp0 "TURN" Turn))
         (helo (mkcmdp1 "HELO" Helo     domain))
-        (ehlo (mkcmdp1 "EHLO" Ehlo     domain))
+        (ehlo (mkcmdp1 "EHLO" Ehlo     domain-or-address-literal))
         (vrfy (mkcmdp1 "VRFY" Vrfy     Arg-string))
         (expn (mkcmdp1 "EXPN" Expn     Arg-string))
         

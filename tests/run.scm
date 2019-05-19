@@ -16,29 +16,45 @@
     "QUIT\r\n"
     ))
 
+(define ehlo-with-ipv4-address
+  `(
+    "EHLO [127.0.0.1]\r\n"
+    "QUIT\r\n"
+    ))
 
-(test-group "chicken-mta"
-	    
-(let ((output (open-output-string)))
-  (main
-   (open-input-string (string-concatenate rfc-D.1))
-   output)
+(test-group
+ "chicken-mta"
 
-  (test "rfc-D.1"
-   (string-append 
-    "250-chicken-mta\r\n"
-    "250- \r\n"
-    "250-Hello \r\n"
-    "250 bar.com\r\n"
-    "250 OK\r\n"
-    "250 Accepted\r\n"
-    "250 Accepted\r\n"
-    "250 Accepted\r\n"
-    "354 Ready\r\n"
-    "250 OK\r\n"
-    "251-chicken-mta\r\n"
-    "251  closing connection\r\n")
-   (get-output-string output))
-  ))
+ (test
+  "rfc-D.1"
+  (string-append
+   "250-chicken-mta\r\n"
+   "250- \r\n"
+   "250-Hello \r\n"
+   "250 bar.com\r\n"
+   "250 OK\r\n"
+   "250 Accepted\r\n"
+   "250 Accepted\r\n"
+   "250 Accepted\r\n"
+   "354 Ready\r\n"
+   "250 OK\r\n"
+   "251-chicken-mta\r\n"
+   "251  closing connection\r\n")
+  (let ((output (open-output-string)))
+    (main (open-input-string (string-concatenate rfc-D.1)) output)
+    (get-output-string output)))
+
+ (test
+  "ehlo with ipv4 address"
+  (string-append
+   "250-chicken-mta\r\n"
+   "250- \r\n"
+   "250-Hello \r\n"
+   "250 127.0.0.1\r\n"
+   "251-chicken-mta\r\n"
+   "251  closing connection\r\n")
+  (let ((output (open-output-string)))
+    (main (open-input-string (string-concatenate ehlo-with-ipv4-address)) output)
+    (get-output-string output))))
 
 (test-exit)
