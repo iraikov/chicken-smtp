@@ -1,7 +1,7 @@
 
 ;; An example MTA implementation
 
-(import  datatype srfi-1 abnf smtp)
+(import  datatype srfi-1 abnf smtp srfi-13)
 
 (define domain    "example.net")
 (define host      "chicken-mta")

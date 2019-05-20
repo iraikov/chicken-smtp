@@ -1,5 +1,5 @@
 
-(import scheme (chicken base) (chicken format) test smtp srfi-13)
+(import scheme (chicken base) (chicken format) test smtp)
 
 (include "mta.scm")
 
