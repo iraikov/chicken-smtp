@@ -4,7 +4,7 @@
 ;;
 ;;  Based on the Haskell Rfc2821 module by Peter Simons.
 ;;
-;;  Copyright 2009-2018 Ivan Raikov
+;;  Copyright 2009-2026 Ivan Raikov
 ;;
 ;;
 ;; This program is free software: you can redistribute it and/or
@@ -111,13 +111,15 @@
 	   (domain string?)))
 
 
-(define-record-printer (mailbox x out)
-  (match x 
-	 (($ smtp#mailbox 'Mailbox "" "" )  (fprintf out "<>"))
-	 (($ smtp#mailbox 'Mailbox "postmaster" "" )  (fprintf out "<postmaster>"))
-	 (($ smtp#mailbox 'Mailbox l d )  
-	  (let ((mbox  (sprintf "~A@~A" l d)))
-	    (fprintf out "<~A>" mbox)))))
+(set-record-printer! mailbox
+                     (lambda (x out)
+                       (match x 
+	                 (($ smtp#mailbox 'Mailbox "" "" )  (fprintf out "<>"))
+	                 (($ smtp#mailbox 'Mailbox "postmaster" "" )  (fprintf out "<postmaster>"))
+	                 (($ smtp#mailbox 'Mailbox l d )  
+	                  (let ((mbox  (sprintf "~A@~A" l d)))
+	                    (fprintf out "<~A>" mbox)))))
+                     )
 
 (define (null-mailbox) (Mailbox "" ""))
 
@@ -166,29 +168,33 @@
 (define-datatype code code?
   (Code (suc success-code?) (cat category?) (num integer?)))
 
-(define-record-printer (reply x out)
-  (match x 
-	 (($ smtp#reply 'Reply (and c ($ smtp#code 'Code suc cat _)) ())
-	  (let ((msg (sprintf "~A in category ~A" suc cat)))
-	    (fprintf out "~A" (Reply c (list msg)))))
+(set-record-printer! reply
+                     (lambda (x out)
+                       (match x 
+	                 (($ smtp#reply 'Reply (and c ($ smtp#code 'Code suc cat _)) ())
+	                  (let ((msg (sprintf "~A in category ~A" suc cat)))
+	                    (fprintf out "~A" (Reply c (list msg)))))
+                         
+	                 (($ smtp#reply 'Reply code msg) 
+	                  (let ((prefix-con (sprintf "~A-" code))
+		                (prefix-end (sprintf "~A " code))
+		                (fmt        (lambda (p) (lambda (l) (sprintf "~A~A\r\n" p l)))))
+	                    (match-let (((x . xs) (reverse msg)))
+		              (let* ((msg-con (map (fmt prefix-con) xs))
+			             (msg-end ((fmt prefix-end) x))
+			             (msg1    (reverse (cons msg-end msg-con))))
+			        (fprintf out "~A" (string-concatenate msg1))))))
+	                 ))
+                     )
 
-	 (($ smtp#reply 'Reply code msg) 
-	  (let ((prefix-con (sprintf "~A-" code))
-		(prefix-end (sprintf "~A " code))
-		(fmt        (lambda (p) (lambda (l) (sprintf "~A~A\r\n" p l)))))
-	    (match-let (((x . xs) (reverse msg)))
-		       (let* ((msg-con (map (fmt prefix-con) xs))
-			      (msg-end ((fmt prefix-end) x))
-			      (msg1    (reverse (cons msg-end msg-con))))
-			 (fprintf out "~A" (string-concatenate msg1))))))
-	 ))
+(set-record-printer! code
+                     (lambda (x out)
+                       (cases code x
+	                      (Code (suc cat n)  
+	                            (fprintf out "~A~A~A" (success-code-project suc) 
+			                     (category-project cat) n))))
+	             )
 
-(define-record-printer (code x out)
-  (cases code x
-	 (Code (suc cat n)  
-	       (fprintf out "~A~A~A" (success-code-project suc) 
-			(category-project cat) n))))
-	  
 ;; Constructs a Reply. 
 
 (define (in-range-incl? lo hi)
@@ -558,15 +564,17 @@
   (HaveData)
   (HaveQuit))
 
-(define-record-printer (session-state x out)
-  (fprintf out "<#session-state ~A>" 
-	   (cases session-state x
-		  (Unknown ()      "Unknown")
-		  (HaveHelo ()     "HaveHelo")
-		  (HaveMailFrom () "HaveMailFrom")
-		  (HaveRcptTo   () "HaveRcptTo")
-		  (HaveData     () "HaveData")
-		  (HaveQuit     () "HaveQuit"))))
+(set-record-printer! session-state
+                     (lambda (x out)
+                       (fprintf out "<#session-state ~A>" 
+	                        (cases session-state x
+		                       (Unknown ()      "Unknown")
+		                       (HaveHelo ()     "HaveHelo")
+		                       (HaveMailFrom () "HaveMailFrom")
+		                       (HaveRcptTo   () "HaveRcptTo")
+		                       (HaveData     () "HaveData")
+		                       (HaveQuit     () "HaveQuit"))))
+                     )
 
 (define-datatype event event?
   (SayHelo       (s string?))
@@ -610,24 +618,26 @@
 ;; returned. 
   (WrongArg (cmd string?)  (message string?)))
 
-(define-record-printer (cmd x out)
-  (cases cmd x 
-	 (Helo (s)        (fprintf out "HELO ~A" s))
-	 (Ehlo (s)        (fprintf out "EHLO ~A" s))
-	 (MailFrom (m p)  (fprintf out "MAIL FROM:~A" m))
-	 (RcptTo (m p)    (fprintf out "RCPT TO: ~A" m))
-	 (Data ()         (fprintf out "DATA"))
-	 (Rset ()         (fprintf out "RSET"))
-	 (Send (m)        (fprintf out "SEND ~A" m))
-	 (Soml (m)        (fprintf out "SOML ~A" m))
-	 (Saml (m)        (fprintf out "SAML ~A" m))
-	 (Vrfy (s)        (fprintf out "VRFY ~A" s))
-	 (Expn (s)        (fprintf out "EXPN ~A" s))
-	 (Noop ()         (fprintf out "NOOP"))
-	 (Quit ()         (fprintf out "QUIT"))
-	 (Turn ()         (fprintf out "TURN"))
-	 (Help (s)        (fprintf out "HELP ~A" s))
-	 (WrongArg (s)    (fprintf out "Syntax error in argument of ~A." s))))
+(set-record-printer! cmd
+                     (lambda (x out)
+                       (cases cmd x 
+	                      (Helo (s)        (fprintf out "HELO ~A" s))
+	                      (Ehlo (s)        (fprintf out "EHLO ~A" s))
+	                      (MailFrom (m p)  (fprintf out "MAIL FROM:~A" m))
+	                      (RcptTo (m p)    (fprintf out "RCPT TO: ~A" m))
+	                      (Data ()         (fprintf out "DATA"))
+	                      (Rset ()         (fprintf out "RSET"))
+	                      (Send (m)        (fprintf out "SEND ~A" m))
+	                      (Soml (m)        (fprintf out "SOML ~A" m))
+	                      (Saml (m)        (fprintf out "SAML ~A" m))
+	                      (Vrfy (s)        (fprintf out "VRFY ~A" s))
+	                      (Expn (s)        (fprintf out "EXPN ~A" s))
+	                      (Noop ()         (fprintf out "NOOP"))
+	                      (Quit ()         (fprintf out "QUIT"))
+	                      (Turn ()         (fprintf out "TURN"))
+	                      (Help (s)        (fprintf out "HELP ~A" s))
+	                      (WrongArg (s)    (fprintf out "Syntax error in argument of ~A." s))))
+                     )
 
 ;; Command Parsers
 

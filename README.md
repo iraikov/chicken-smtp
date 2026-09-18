@@ -316,6 +316,7 @@ machine:
 
 ## Version History
 
+- 5.3: Ported to CHICKEN 6
 - 5.0-5.1 Ported to CHICKEN 5
 - 3.2 Ensure test script returns proper exit status
 - 3.1 Compatibility with improved CharLex->CoreABNF constructor
@@ -328,7 +329,7 @@ machine:
 
 Based on the Haskell Rfc2821 module by Peter Simons.
 
-  Copyright 2009-2019 Ivan Raikov.
+  Copyright 2009-2026 Ivan Raikov.
 
 
   This program is free software: you can redistribute it and/or
